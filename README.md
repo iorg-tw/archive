@@ -1,7 +1,7 @@
 # IORG Archive (public)
 
 1. Archive locally
-2. Organize files to volumes
+2. Organize files into `/{volume}/{group}`
 3. Stage files and generate ID automatically
 4. Maintain global list and edit metadata on Sheet
 
