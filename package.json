@@ -1,0 +1,27 @@
+{
+  "name": "archive",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "download": "node download.js",
+    "import-local": "node scripts/import-local.js",
+    "make-thumbs": "node scripts/make-thumbs.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iorg-tw/archive.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/iorg-tw/archive/issues"
+  },
+  "homepage": "https://github.com/iorg-tw/archive#readme",
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "google-spreadsheet": "^3.1.15",
+    "googleapis": "^75.0.0",
+    "sharp": "^0.28.3"
+  }
+}
