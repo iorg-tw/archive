@@ -190,10 +190,10 @@ async function localImport(archivist) {
 
   const tab = '\t'
   const keys = ['ioid', 'archivist', 'archivedAt', 'p', 'f', 'n', 'ext']
-  fs.writeFileSync(path.resolve(__dirname, 'add.tsv'), addFiles.map(f => keys.map(k => f[k]).join(tab)).join('\n'))
+  fs.writeFileSync(path.resolve(__dirname, 'import-local-add.tsv'), addFiles.map(f => keys.map(k => f[k]).join(tab)).join('\n'))
 
   // TODO: list files to update
-  fs.writeFileSync(path.resolve(__dirname, 'update.tsv'), JSON.stringify(updateFiles, null, '\t')) // FIXME: tmp
+  fs.writeFileSync(path.resolve(__dirname, 'import-local-update.tsv'), JSON.stringify(updateFiles, null, '\t')) // FIXME: tmp
 
   // clear stage
   console.info('Clear stage...')

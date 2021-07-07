@@ -8,14 +8,18 @@
 ## iorg-tw/archive
 - Download from drive
   - `npm run download` (will only sync new files)
-  - check files
-  - move files into `files`
+  - Check files
+  - Move files into `files`
 - Import from local file sys
+  - Assign volume(s) from which to import
   - `npm run import-local`
-  - check `stage`
-  - paste `add.tsv` to Dokidoki Archive (edit metadata there)
-  - move files into `files`
-  - commit changes
+  - Files to add
+    - Check `stage-import-local-add`
+    - Paste `import-local-add.tsv` to Dokidoki Archive (edit metadata there)
+    - Move files from stage into `files`
+    - Commit changes
+  - Files to update
+    - ...
 - Make thumbnails
   - `npm run make-thumbs` (option to skip files with existing thumb)
 
