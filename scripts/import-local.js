@@ -3,6 +3,7 @@ dotenv.config()
 const fs = require('fs')
 const { COPYFILE_EXCL } = fs.constants
 const path = require('path')
+const { utimes } = require('utimes')
 const { GoogleSpreadsheet } = require('google-spreadsheet')
 
 const wait = s => new Promise(resolve => setTimeout(resolve, s * 1000))
@@ -79,8 +80,29 @@ async function getArchivistFileMap(archivist) {
       p: row.archivist_p
     }
   })))
-  console.info(Object.keys(map).length, 'entries')
+  console.info(Object.keys(map).length, 'entries in map')
   return map
+}
+
+const extMap = { 'jpeg': 'jpg' }
+
+function copyFiles(files, destDir) {
+  for(const f of files) {
+    const preferredExt = extMap[f.ext] ? extMap[f.ext] : f.ext
+    const fileName = f.ioid + '.' + preferredExt
+    console.info(fileName)
+    const src = f.p
+    const dest = path.resolve(destDir, fileName)
+    fs.copyFileSync(src, dest, COPYFILE_EXCL)
+    utimes(dest, {
+      atime: f.atime.getTime(),
+      mtime: f.mtime.getTime(),
+      btime: f.btime.getTime()
+    })
+    // fs.fstatSync(fs.openSync(src))
+    // fs.fstatSync(fs.openSync(dest))
+    // a/m/b time should be identical except ctime
+  }
 }
 
 /* fstat
@@ -91,16 +113,15 @@ macOS
 - 取代的話，全部都會改
 - 修改內容看 mtime 好了
 - 用最後修改時間當作 archivedAt
+- 手動複製檔案 a/m/b time 維持不變 ctime 是複製當下的時間
 */
 
 async function localImport(archivist) {
   const allowedFileExt = ['png', 'jpg', 'jpeg']
-  const extMap = { 'jpeg': 'jpg' }
 
   console.info('Hi archivist', archivist)
   console.info('Get archivist file map...')
-  let fileMap = await getArchivistFileMap(archivist)
-  console.log(fileMap)
+  const fileMap = await getArchivistFileMap(archivist)
 
   const root = process.env.LOCAL_ARCHIVE_ROOT_PATH
   const addFiles = []
@@ -121,9 +142,11 @@ async function localImport(archivist) {
         const p = path.resolve(root, volume, group, f)
         const fd = fs.openSync(p)
         const stat = fs.fstatSync(fd)
-        const a = stat.mtime
+        const atime = stat.atime
+        const mtime = stat.mtime
+        const btime = stat.birthtime
         const archivedAt = datetime(stat.mtime)
-        return { archivist, archivedAt, a, p, f, n, ext }
+        return { archivist, archivedAt, p, f, n, ext, atime, mtime, btime }
       })
       const uniqueFileNames = [...new Set(files.map(f => f.n))]
       for(const name of uniqueFileNames) {
@@ -139,11 +162,12 @@ async function localImport(archivist) {
           const fileInMap = fileMap[file.p]
           if(fileInMap === undefined) {
             addFiles.push(file)
-          } else { // file already in map
+          } else { // file already in map (matching (local) path)
             const _old = new Date(fileInMap.archivedAt.trim().replace(/\s/g, ' ')) // gsheet uses nbsp (160) instead of space (32) 🤫
-            const _new = new Date(file.a.getTime())
+            const _new = new Date(file.mtime.getTime())
             _new.setMilliseconds(0) // discard ms
             if(_old < _new) {
+              file.ioid = fileInMap.ioid
               updateFiles.push(file)
             }
           }
@@ -173,22 +197,28 @@ async function localImport(archivist) {
 
   // clear stage
   console.info('Clear stage...')
-  const stage = path.resolve(__dirname, '../stage-import-local')
-  if(fs.existsSync(stage)) {
-    fs.rmdirSync(stage, { recursive: true })
+  const stageAdd = path.resolve(__dirname, '../stage-import-local-add')
+  const stageUpdate = path.resolve(__dirname, '../stage-import-local-update')
+  if(fs.existsSync(stageAdd)) {
+    fs.rmdirSync(stageAdd, { recursive: true })
   }
-  fs.mkdirSync(stage)
-
-  // copy files to stage
-  console.info('Stage files...')
-  for(const f of addFiles) {
-    const preferredExt = extMap[f.ext] ? extMap[f.ext] : f.ext
-    const fileName = f.ioid + '.' + preferredExt
-    console.info(fileName)
-    fs.copyFileSync(f.p, path.resolve(stage, fileName), COPYFILE_EXCL)
+  if(fs.existsSync(stageUpdate)) {
+    fs.rmdirSync(stageUpdate, { recursive: true })
   }
+  fs.mkdirSync(stageAdd)
+  fs.mkdirSync(stageUpdate)
 
-  console.info('Files staged')
+  // stage files to add
+  console.info('Stage files to add...')
+  copyFiles(addFiles, stageAdd)
+  await wait(1)
+
+  // stage files to update
+  console.info('Stage files to update...')
+  copyFiles(updateFiles, stageUpdate)
+  await wait(1)
+
+  console.log('Files staged')
 }
 
 const archivist = (process.env.ARCHIVIST ? process.env.ARCHIVIST : null)

@@ -4,4 +4,5 @@ node_modules
 keys
 scripts/*.tsv
 stage-download
-stage-import-local
+stage-import-local-add
+stage-import-local-update
