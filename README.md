@@ -9,12 +9,12 @@
 - Download from drive
   - `npm run download` (will only sync new files)
   - check files
-  - move files into `/files`
+  - move files into `files`
 - Import from local file sys
   - `npm run import-local`
-  - check `/stage`
-  - past add.tsv to Dokidoki Archive (edit metadata there)
-  - move files into `/files`
+  - check `stage`
+  - paste `add.tsv` to Dokidoki Archive (edit metadata there)
+  - move files into `files`
   - commit changes
 - Make thumbnails
   - `npm run make-thumbs` (option to skip files with existing thumb)
