@@ -3,6 +3,6 @@
 node_modules
 keys
 scripts/*.tsv
-stage-download
+stage-import-doki
 stage-import-local-add
 stage-import-local-update

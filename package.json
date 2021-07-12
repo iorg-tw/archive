@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "download": "node download.js",
+    "import-da": "node scripts/import-doki.js",
     "import-local": "node scripts/import-local.js",
     "make-thumbs": "node scripts/make-thumbs.js"
   },
