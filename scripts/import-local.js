@@ -76,7 +76,7 @@ async function getArchivistFileMap(archivist) {
     [row.archivist_p]: {
       ioid: row.ioid,
       archivist: row.archivist,
-      archivedAt: row.archivedAt,
+      archivedAt: row.archivedAt.trim().replace(/\s/g, ' '),
       p: row.archivist_p
     }
   })))
@@ -85,7 +85,6 @@ async function getArchivistFileMap(archivist) {
 }
 
 const extMap = { 'jpeg': 'jpg' }
-
 function copyFiles(files, destDir) {
   for(const f of files) {
     const preferredExt = extMap[f.ext] ? extMap[f.ext] : f.ext
@@ -116,7 +115,7 @@ macOS
 - 手動複製檔案 a/m/b time 維持不變 ctime 是複製當下的時間
 */
 
-async function localImport(archivist) {
+async function importLocal(archivist, volume = '0701', volumePrefix = 'P4') {
   const allowedFileExt = ['png', 'jpg', 'jpeg']
 
   console.info('Hi archivist', archivist)
@@ -126,7 +125,7 @@ async function localImport(archivist) {
   const root = process.env.LOCAL_ARCHIVE_ROOT_PATH
   const addFiles = []
   const updateFiles = []
-  const volumes = ['0701']
+  const volumes = [volume]
 
   for(const volume of volumes) {
     const volumePath = path.resolve(root, volume)
@@ -138,7 +137,7 @@ async function localImport(archivist) {
       const files = listFiles(groupPath).map(f => {
         const d = f.lastIndexOf('.')
         const n = f.substring(0, d)
-        const ext = f.substring(d + 1)
+        const ext = f.substring(d + 1).toLowerCase()
         const p = path.resolve(root, volume, group, f)
         const fd = fs.openSync(p)
         const stat = fs.fstatSync(fd)
@@ -151,7 +150,18 @@ async function localImport(archivist) {
       const uniqueFileNames = [...new Set(files.map(f => f.n))]
       for(const name of uniqueFileNames) {
         const matchFiles = files.filter(f => f.n === name)
-        // console.log(matchFiles)
+        
+        // use pdfFile.archivedAt (if exists) as archivedAt
+        // 常見流程：網頁輸出為 PDF 後再手動輸出為 PNG
+        // 以輸出為 PDF 的時間為備份時間
+        let pdfFile = matchFiles.find(f => f.ext === 'pdf')
+        if(pdfFile && matchFiles.length > 1) {
+          for(let i = 0; i < matchFiles.length; i++) {
+            matchFiles[i].archivedAt = pdfFile.archivedAt
+          }
+        }
+
+        // archive file with allowed ext (image)
         let file = null
         for(const ext of allowedFileExt) {
           file = matchFiles.find(f => f.ext === ext)
@@ -163,8 +173,9 @@ async function localImport(archivist) {
           if(fileInMap === undefined) {
             addFiles.push(file)
           } else { // file already in map (matching (local) path)
-            const _old = new Date(fileInMap.archivedAt.trim().replace(/\s/g, ' ')) // gsheet uses nbsp (160) instead of space (32) 🤫
-            const _new = new Date(file.mtime.getTime())
+            // 比較 archivedAt 決定是否需要更新
+            const _old = new Date(fileInMap.archivedAt) // gsheet uses nbsp (160) instead of space (32) 🤫
+            const _new = new Date((pdfFile ? pdfFile : file).mtime.getTime()) // use pdfFile.archivedAt to compare
             _new.setMilliseconds(0) // discard ms
             if(_old < _new) {
               file.ioid = fileInMap.ioid
@@ -182,7 +193,7 @@ async function localImport(archivist) {
 
   // gen ids
   console.info('Generate IOID for files to add...')
-  const ids = idGenerator(addFiles.length, 'P4', fileMap)
+  const ids = idGenerator(addFiles.length, volumePrefix, fileMap)
   console.log(ids)
   for(let i = 0; i < addFiles.length; i++) {
     addFiles[i].ioid = ids[i]
@@ -193,7 +204,7 @@ async function localImport(archivist) {
   fs.writeFileSync(path.resolve(__dirname, 'import-local-add.tsv'), addFiles.map(f => keys.map(k => f[k]).join(tab)).join('\n'))
 
   // TODO: list files to update
-  fs.writeFileSync(path.resolve(__dirname, 'import-local-update.tsv'), JSON.stringify(updateFiles, null, '\t')) // FIXME: tmp
+  fs.writeFileSync(path.resolve(__dirname, 'import-local-update.tsv'), JSON.stringify(updateFiles, null, '\t')) // FIXME: this is not done
 
   // clear stage
   console.info('Clear stage...')
@@ -222,8 +233,9 @@ async function localImport(archivist) {
 }
 
 const archivist = (process.env.ARCHIVIST ? process.env.ARCHIVIST : null)
+const args = process.argv.slice(2)
 if(archivist) {
-  localImport(archivist)
+  importLocal(archivist, args[0], args[1])
 } else {
   console.error('Archivist not found')
 }
