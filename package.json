@@ -6,7 +6,8 @@
   "scripts": {
     "import-da": "node scripts/import-doki.js",
     "import-local": "node scripts/import-local.js",
-    "make-thumbs": "node scripts/make-thumbs.js"
+    "make-thumbs": "node scripts/make-thumbs.js",
+    "merge": "node scripts/merge.js"
   },
   "repository": {
     "type": "git",
