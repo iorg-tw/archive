@@ -67,11 +67,11 @@ function idGenerator(num, g, map) {
 }
 
 async function getArchivistFileMap(archivist) {
-  const doc = new GoogleSpreadsheet(process.env.DA_DOC_ID)
-  doc.useApiKey(process.env.GOOGLE_SHEET_API_KEY)
-  await doc.loadInfo()
+  const gsFile = new GoogleSpreadsheet(process.env.DA_GS_FILE_ID)
+  gsFile.useApiKey(process.env.GOOGLE_SHEET_API_KEY)
+  await gsFile.loadInfo()
 
-  const rows = await doc.sheetsById[process.env.DA_SHEET_ID].getRows()
+  const rows = await gsFile.sheetsById[process.env.DA_SHEET_ID].getRows()
   map = Object.assign({}, ...rows.filter(row => row.ioid && row.archivist === archivist && row.archivist_p).map(row => ({
     [row.archivist_p]: {
       ioid: row.ioid,
@@ -201,10 +201,10 @@ async function importLocal(archivist, volume = '0701', volumePrefix = 'P4') {
 
   const tab = '\t'
   const keys = ['ioid', 'archivist', 'archivedAt', 'p', 'f', 'n', 'ext']
-  fs.writeFileSync(path.resolve(__dirname, 'import-local-add.tsv'), addFiles.map(f => keys.map(k => f[k]).join(tab)).join('\n'))
+  fs.writeFileSync(path.resolve(__dirname, '../data', 'import-local-add.tsv'), addFiles.map(f => keys.map(k => f[k]).join(tab)).join('\n'))
 
   // TODO: list files to update
-  fs.writeFileSync(path.resolve(__dirname, 'import-local-update.tsv'), JSON.stringify(updateFiles, null, '\t')) // FIXME: this is not done
+  fs.writeFileSync(path.resolve(__dirname, '../data', 'import-local-update.tsv'), JSON.stringify(updateFiles, null, '\t')) // FIXME: this is not done
 
   // clear stage
   console.info('Clear stage...')

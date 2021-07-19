@@ -10,8 +10,8 @@ function ok(str) {
   return str !== null && str !== undefined && str.trim().length > 0
 }
 
-const doc = new GoogleSpreadsheet(process.env.DA_DOC_ID)
-doc.useApiKey(process.env.GOOGLE_SHEET_API_KEY)
+const gsFile = new GoogleSpreadsheet(process.env.DA_GS_FILE_ID)
+gsFile.useApiKey(process.env.GOOGLE_SHEET_API_KEY)
 
 async function downloadDriveFile(driveID, destFileName) {
   console.info('Download file', driveID, 'to', destFileName)
@@ -25,7 +25,7 @@ async function downloadDriveFile(driveID, destFileName) {
   }
   destFileName += '.' + type
 
-  const dest = fs.createWriteStream(path.join(__dirname, '../stage-import-doki' destFileName))
+  const dest = fs.createWriteStream(path.resolve(__dirname, '../stage-import-doki' destFileName))
   stream.data.pipe(dest)
 
   return destFileName
@@ -33,9 +33,9 @@ async function downloadDriveFile(driveID, destFileName) {
 
 async function importDoki() {
   console.info('Import files from Dokidoki Archive...')
-  await doc.loadInfo()
+  await gsFile.loadInfo()
 
-  let rows = await doc.sheetsById[process.env.DA_SHEET_ID].getRows()
+  let rows = await gsFile.sheetsById[process.env.DA_SHEET_ID].getRows()
   rows = rows.filter(row => row.ioid && row.mainFile).map(row => ({
     ioid: row.ioid,
     mailFile: row.mainFile
@@ -67,7 +67,7 @@ async function importDoki() {
 
   console.info(newImportCount, 'new files imported')
   console.info(list.length, 'total files imported')
-  fs.writeFileSync('import-doki-imported.json', JSON.stringify(list))
+  fs.writeFileSync(path.resolve(__dirname, '../data', 'import-doki-imported.json'), JSON.stringify(list))
 }
 
 importDoki()
