@@ -52,7 +52,7 @@ function genID(g) {
   return 'X-' + g + randAlphaNum(2) + '-' + randAlphaNum(4)
 }
 
-function idGenerator(num, g, map) {
+function idGenerator(num, g, map, sorted = false) {
   console.info('Generate new ids...')
   const used = Object.values(map).map(file => file.ioid)
   const generated = []
@@ -62,6 +62,9 @@ function idGenerator(num, g, map) {
       id = genID(g)
     }
     generated.push(id)
+  }
+  if(sorted) {
+    generated.sort((a, b) => a === b ? 0 : (a < b ? -1 : 1))
   }
   return generated
 }
@@ -144,8 +147,9 @@ async function importLocal(archivist, volume = '0701', volumePrefix = 'P4') {
         const atime = stat.atime
         const mtime = stat.mtime
         const btime = stat.birthtime
-        const archivedAt = datetime(stat.mtime)
-        return { archivist, archivedAt, p, f, n, ext, atime, mtime, btime }
+        const archivedAtDateObj = stat.mtime
+        const archivedAt = datetime(archivedAtDateObj)
+        return { archivist, archivedAt, archivedAtDateObj, p, f, n, ext, atime, mtime, btime }
       })
       const uniqueFileNames = [...new Set(files.map(f => f.n))]
       for(const name of uniqueFileNames) {
@@ -157,6 +161,7 @@ async function importLocal(archivist, volume = '0701', volumePrefix = 'P4') {
         let pdfFile = matchFiles.find(f => f.ext === 'pdf')
         if(pdfFile && matchFiles.length > 1) {
           for(let i = 0; i < matchFiles.length; i++) {
+            matchFiles[i].archivedAtDateObj = pdfFile.archivedAtDateObj
             matchFiles[i].archivedAt = pdfFile.archivedAt
           }
         }
@@ -191,9 +196,13 @@ async function importLocal(archivist, volume = '0701', volumePrefix = 'P4') {
   console.log(updateFiles.length, 'files to update')
   await wait(1)
 
+  // sort addFiles by archivedAt
+  console.info('Sort files according to archivedAt')
+  addFiles.sort((a, b) => a.archivedAtDateObj - b.archivedAtDateObj)
+
   // gen ids
   console.info('Generate IOID for files to add...')
-  const ids = idGenerator(addFiles.length, volumePrefix, fileMap)
+  const ids = idGenerator(addFiles.length, volumePrefix, fileMap, true)
   console.log(ids)
   for(let i = 0; i < addFiles.length; i++) {
     addFiles[i].ioid = ids[i]
