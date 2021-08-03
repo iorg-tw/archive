@@ -3,6 +3,7 @@
 node_modules
 keys
 data/*.tsv
+data/archive.json
 stage-import-doki
 stage-import-local-add
 stage-import-local-update
